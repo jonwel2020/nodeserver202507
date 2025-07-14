@@ -1,0 +1,150 @@
+{
+  "name": "express-api-framework",
+  "version": "1.0.0",
+  "description": "企业级 Node.js + Express + MySQL 后端API服务框架，支持小程序端和后台管理端双端完全隔离架构",
+  "main": "server.js",
+  "author": "系统",
+  "license": "MIT",
+  "keywords": [
+    "nodejs",
+    "express",
+    "mysql",
+    "redis",
+    "jwt",
+    "api",
+    "framework",
+    "微信小程序",
+    "后台管理",
+    "企业级"
+  ],
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "dev:debug": "nodemon --inspect server.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "lint": "eslint src/ tests/ --ext .js",
+    "lint:fix": "eslint src/ tests/ --ext .js --fix",
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\" \"*.js\"",
+    "db:init": "node scripts/init-database.js",
+    "db:seed": "node scripts/seed-data.js",
+    "db:test": "node scripts/test-database.js",
+    "db:migrate": "node scripts/migrate.js",
+    "build": "npm run lint && npm run test",
+    "build:prod": "npm run lint && npm run test && npm run format:check",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop express-api-framework",
+    "pm2:restart": "pm2 restart express-api-framework",
+    "pm2:logs": "pm2 logs express-api-framework",
+    "docker:build": "docker build -t express-api-framework .",
+    "docker:run": "docker run -p 3000:3000 express-api-framework",
+    "docs:generate": "jsdoc -c jsdoc.config.json",
+    "security:audit": "npm audit",
+    "security:fix": "npm audit fix",
+    "clean": "rm -rf node_modules package-lock.json",
+    "reinstall": "npm run clean && npm install"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "redis": "^4.6.10",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "joi": "^17.11.0",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.7",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1",
+    "moment": "^2.29.4",
+    "lodash": "^4.17.21",
+    "express-validator": "^7.0.1",
+    "cookie-parser": "^1.4.6",
+    "express-session": "^1.17.3",
+    "connect-redis": "^7.1.0",
+    "csv-parser": "^3.0.0",
+    "xlsx": "^0.18.5",
+    "qrcode": "^1.5.3",
+    "sharp": "^0.32.6",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.54.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-jest": "^27.6.0",
+    "prettier": "^3.1.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.1.0",
+    "cross-env": "^7.0.3",
+    "@types/node": "^20.9.4",
+    "jsdoc": "^4.0.2",
+    "jsdoc-to-markdown": "^8.0.0",
+    "npm-check-updates": "^16.14.11",
+    "pm2": "^5.3.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/config/index.js",
+      "!src/**/index.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js",
+      "**/tests/**/*.spec.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testTimeout": 30000
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/express-api-framework.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/express-api-framework/issues"
+  },
+  "homepage": "https://github.com/your-org/express-api-framework#readme",
+  "directories": {
+    "test": "tests",
+    "doc": "docs"
+  },
+  "files": [
+    "src/",
+    "scripts/",
+    "server.js",
+    "README.md",
+    "LICENSE"
+  ]
+} 

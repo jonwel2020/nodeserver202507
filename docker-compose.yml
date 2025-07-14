@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # API服务
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: express-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # 基础配置
+      - NODE_ENV=production
+      - PORT=3000
+      
+      # 数据库配置
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=express_api_db
+      - DB_USER=api_user
+      - DB_PASSWORD=${DB_PASSWORD:-secure_password}
+      
+      # Redis配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      
+      # JWT配置
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key}
+      - JWT_EXPIRES_IN=24h
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-your-refresh-secret}
+      - JWT_REFRESH_EXPIRES_IN=7d
+      
+      # 管理端JWT配置
+      - ADMIN_JWT_SECRET=${ADMIN_JWT_SECRET:-your-admin-jwt-secret}
+      - ADMIN_JWT_EXPIRES_IN=2h
+      - ADMIN_ALLOWED_IPS=127.0.0.1,::1,nginx
+      
+      # 邮件配置
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-your-email@gmail.com}
+      - SMTP_PASS=${SMTP_PASS:-your-app-password}
+      
+      # 文件上传配置
+      - UPLOAD_PATH=./uploads
+      - MAX_FILE_SIZE=5242880
+      - ALLOWED_FILE_TYPES=jpg,jpeg,png,gif,pdf,doc,docx
+      
+      # 日志配置
+      - LOG_LEVEL=info
+      - LOG_FILE=./logs/app.log
+      
+      # 限流配置
+      - RATE_LIMIT_WINDOW=15
+      - RATE_LIMIT_MAX_REQUESTS=100
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MySQL数据库
+  mysql:
+    image: mysql:8.0
+    container_name: express-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_password}
+      - MYSQL_DATABASE=express_api_db
+      - MYSQL_USER=api_user
+      - MYSQL_PASSWORD=${DB_PASSWORD:-secure_password}
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init-database.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    command: --default-authentication-plugin=mysql_native_password --innodb-buffer-pool-size=512M
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_password}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: express-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
+    command: redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD:-redis_password}
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: express-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/sites-available:/etc/nginx/sites-available:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - ./uploads:/var/www/uploads:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # 日志收集器（可选）
+  logrotate:
+    image: alpine:latest
+    container_name: express-logrotate
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - nginx_logs:/var/log/nginx
+      - ./docker/logrotate/logrotate.conf:/etc/logrotate.conf:ro
+    command: sh -c "while true; do logrotate /etc/logrotate.conf; sleep 86400; done"
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
